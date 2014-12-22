@@ -289,6 +289,7 @@ int FreeDistroList(DISTRO_NODE **list, pthread_mutex_t *mtx);
 PD_CHATTER *GetChatter(int s);
 int SendChatter(int s, PD_CHATTER *ch);
 
+void usage(char *name);
 void crash(int signal);
 
 unsigned long STATUS = 0x00000000;
@@ -329,6 +330,12 @@ int main(unsigned long argc, unsigned char **argv)
 	
 	for(x = 1; x < 31; x++)
 		signal(x, crash);
+	
+	if(argc == 1)
+	{
+		usage(argv[0]);
+		exit(0);
+	}
 	
 	for(x = 1; x < argc; x++)
 	{
@@ -389,6 +396,10 @@ int main(unsigned long argc, unsigned char **argv)
 						}
 						db = strdup(argv[x]);
 						break;
+					case 'H':
+					case 'h':
+						usage(argv[0]);
+						exit(0);
 					case 'L':
 					case 'l':
 						if(argc == ++x)
@@ -1010,7 +1021,8 @@ MEM_PMK_DB *CreatePMKDB(char *path)
 	if(!path)
 		return NULL;
 	
-	mdb = (MEM_PMK_DB*)malloc(sizeof(MEM_PMK_DB));
+	if(!(mdb = (MEM_PMK_DB*)malloc(sizeof(MEM_PMK_DB))))
+		return NULL;
 	
 	if((mdb->fd = open(path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR )) == -1)
 	{
@@ -1028,7 +1040,7 @@ MEM_PMK_DB *CreatePMKDB(char *path)
 	mdb->db.last_pass = 0;
 	mdb->size = sizeof(PMK_DB);
 	
-	if(write(mdb->fd, mdb->db, sizeof(PMK_DB)) == -1)
+	if(write(mdb->fd, &mdb->db, sizeof(PMK_DB)) == -1)
 	{
 		close(mdb->fd);
 		free(mdb);
@@ -1046,7 +1058,8 @@ MEM_PMK_DB *OpenPMKDB(char *path)
 	if(!path)
 		return NULL;
 	
-	mdb = (MEM_PMK_DB*)malloc(sizeof(MEM_PMK_DB));
+	if(!(mdb = (MEM_PMK_DB*)malloc(sizeof(MEM_PMK_DB))))
+		return NULL;
 	
 	if((mdb->fd = open(path, O_RDWR, S_IRUSR | S_IWUSR)) == -1)
 	{
@@ -2982,6 +2995,30 @@ int SendChatter(int s, PD_CHATTER *ch)
 		return -1;
 	bdbg(2) printf("SendChatter() done\n");
 	return 0;
+}
+
+void usage(char *name)
+{
+	if(!name)
+		return;
+	
+	printf("Usage: %s [options]\n"
+		"\n"
+		"Options:\n"
+		"	-a pass|ssid <filename>		--	Add password or SSID list from specified file\n"
+		"	-c <filename>			--	PCAP capture file\n"
+		"	-d <filename>			--	PMK Database\n"
+		"	-h				--	Display this screen\n"
+		"	-l pass|ssid|calc [<table>]	--	Lists passwords SSIDs or calculated PMKs from database\n"
+		"	-p <port>			--	Specify port number\n"
+		"	-r <host>			--	Specify remote host (Client Mode)\n"
+		"	-s				--	Server Mode\n"
+		"	-t <threads>			--	Number of threads to use for calculating PMKs\n"
+		"	-u				--	Unlock locked database after crash\n"
+		"	-v <level>			--	Set debug level\n"
+		"	-w <seconds>			--	Number of seconds of work to hand each client\n", name);
+	
+	return;
 }
 
 void crash(int signal)
